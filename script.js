@@ -2908,3 +2908,302 @@ async function loadDataFromSupabase() {
 window.addEventListener('DOMContentLoaded', async () => {
   await loadDataFromSupabase();
 });
+function handleProdBannerUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    const base64 = evt.target.result;
+    document.getElementById('prodBannerBase64').value = base64;
+    const previewContainer = document.getElementById('prodBannerPreviewContainer');
+    const previewBox = document.getElementById('prodBannerPreview');
+    previewContainer.classList.remove('hidden');
+    if (file.type.startsWith('video/')) {
+      previewBox.innerHTML = `<video src="${base64}" controls autoplay loop class="w-full h-32 object-cover rounded-xl border border-indigo-500/40"></video>`;
+    } else {
+      previewBox.innerHTML = `<img src="${base64}" class="w-full h-32 object-cover rounded-xl border border-indigo-500/40"/>`;
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+
+
+// Custom Background & Multi Button Access Integration
+let backgroundSettings = JSON.parse(localStorage.getItem('starvoids_bg_settings')) || {
+  type: 'default',
+  imageUrl: '',
+  imageBase64: '',
+  videoUrl: '',
+  videoBase64: '',
+  solidColor: '#0f172a',
+  gradColor1: '#0f172a',
+  gradColor2: '#312e81',
+  blur: 0,
+  opacity: 100,
+  overlayColor: '#000000',
+  overlayOpacity: 40
+};
+
+let productAccessButtonsTemp = [];
+
+function applyCustomBackground() {
+  const container = document.getElementById('storeBgContent');
+  const overlay = document.getElementById('storeBgOverlay');
+  if (!container || !overlay) return;
+
+  overlay.style.backgroundColor = backgroundSettings.overlayColor || '#000000';
+  overlay.style.opacity = (backgroundSettings.overlayOpacity || 0) / 100;
+
+  container.innerHTML = '';
+  container.style.filter = `blur(${backgroundSettings.blur || 0}px)`;
+  container.style.opacity = (backgroundSettings.opacity || 100) / 100;
+
+  const bgType = backgroundSettings.type || 'default';
+
+  if (bgType === 'default') {
+    container.style.background = 'transparent';
+  } else if (bgType === 'solid') {
+    container.style.backgroundColor = backgroundSettings.solidColor || '#0f172a';
+  } else if (bgType === 'gradient') {
+    container.style.background = `linear-gradient(135deg, ${backgroundSettings.gradColor1 || '#0f172a'}, ${backgroundSettings.gradColor2 || '#312e81'})`;
+  } else if (bgType === 'image') {
+    const imgSrc = backgroundSettings.imageBase64 || backgroundSettings.imageUrl;
+    if (imgSrc) {
+      container.style.background = `url("${imgSrc}") center/cover no-repeat fixed`;
+    }
+  } else if (bgType === 'video') {
+    const videoSrc = backgroundSettings.videoBase64 || backgroundSettings.videoUrl;
+    if (videoSrc) {
+      container.innerHTML = `<video src="${videoSrc}" autoplay loop muted playsinline class="w-full h-full object-cover"></video>`;
+    }
+  }
+}
+
+function toggleBgTypeFields(val) {
+  const imgG = document.getElementById('bgImageGroup');
+  const vidG = document.getElementById('bgVideoGroup');
+  const sldG = document.getElementById('bgSolidGroup');
+  const grdG = document.getElementById('bgGradientGroup');
+  if (imgG) imgG.classList.add('hidden');
+  if (vidG) vidG.classList.add('hidden');
+  if (sldG) sldG.classList.add('hidden');
+  if (grdG) grdG.classList.add('hidden');
+
+  if (val === 'image' && imgG) imgG.classList.remove('hidden');
+  else if (val === 'video' && vidG) vidG.classList.remove('hidden');
+  else if (val === 'solid' && sldG) sldG.classList.remove('hidden');
+  else if (val === 'gradient' && grdG) grdG.classList.remove('hidden');
+}
+
+function handleBgImageUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    backgroundSettings.imageBase64 = evt.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleBgVideoUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    backgroundSettings.videoBase64 = evt.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveBgSettings() {
+  backgroundSettings.type = document.getElementById('bgTypeInput').value;
+  backgroundSettings.imageUrl = document.getElementById('bgImageUrlInput').value.trim();
+  backgroundSettings.videoUrl = document.getElementById('bgVideoUrlInput').value.trim();
+  backgroundSettings.solidColor = document.getElementById('bgSolidColorInput').value;
+  backgroundSettings.gradColor1 = document.getElementById('bgGradColor1').value;
+  backgroundSettings.gradColor2 = document.getElementById('bgGradColor2').value;
+  backgroundSettings.blur = parseInt(document.getElementById('bgBlurInput').value) || 0;
+  backgroundSettings.opacity = parseInt(document.getElementById('bgOpacityInput').value) || 100;
+  backgroundSettings.overlayColor = document.getElementById('bgOverlayColorInput').value;
+  backgroundSettings.overlayOpacity = parseInt(document.getElementById('bgOverlayOpacityInput').value) || 40;
+
+  localStorage.setItem('starvoids_bg_settings', JSON.stringify(backgroundSettings));
+  applyCustomBackground();
+  if (typeof triggerCustomAlert === 'function') {
+    triggerCustomAlert('Sukses', 'Pengaturan background toko berhasil disimpan!');
+  }
+}
+
+function closePaymentConfirmationPopup() {
+  const popup = document.getElementById('paymentConfirmationPopup');
+  if (popup) popup.classList.add('opacity-0', 'pointer-events-none');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  applyCustomBackground();
+});
+// Variable temporary untuk menyimpan array tombol akses dinamis saat membuat/mengedit produk
+let tempAccessButtons = [];
+
+/**
+ * Menambahkan form item tombol akses baru secara dinamis
+ */
+function addAccessButtonField(data = null) {
+  const container = document.getElementById('accessButtonsContainer');
+  if (!container) return;
+  
+  const btnId = data ? data.id : Date.now() + Math.random().toString(36).substr(2, 4);
+
+  const itemData = data || {
+    id: btnId,
+    name: '',
+    url: '',
+    fileBase64: '',
+    desc: ''
+  };
+
+  if (!data) {
+    tempAccessButtons.push(itemData);
+  }
+
+  const cardHtml = `
+    <div id="accessBtnItem_${btnId}" class="p-3 bg-gray-900/90 rounded-2xl border border-indigo-900/40 space-y-3 relative group">
+      <div class="flex justify-between items-center border-b border-gray-800 pb-2">
+        <span class="text-xs font-bold text-indigo-300 flex items-center gap-1">
+          <i data-lucide="link" class="w-3.5 h-3.5"></i> Tombol Akses #${container.children.length + 1}
+        </span>
+        <button type="button" onclick="removeAccessButtonField('${btnId}')" class="text-red-400 hover:text-red-300 text-xs font-semibold flex items-center gap-1 p-1 hover:bg-red-500/10 rounded-lg transition" title="Hapus Tombol">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Hapus
+        </button>
+      </div>
+
+      <!-- Nama Tombol -->
+      <div>
+        <label class="block text-[11px] font-semibold text-gray-400 mb-1">Nama Tombol Akses *</label>
+        <input type="text" value="${itemData.name}" oninput="updateAccessButtonData('${btnId}', 'name', this.value)" placeholder="Contoh: Download File Utama / Buka Video" class="w-full px-3 py-2 text-xs bg-gray-800 border border-gray-700 rounded-xl text-white font-bold">
+      </div>
+
+      <!-- Link URL External -->
+      <div>
+        <label class="block text-[11px] font-semibold text-gray-400 mb-1">Link URL Tautan (Drive/Web External)</label>
+        <input type="text" value="${itemData.url}" oninput="updateAccessButtonData('${btnId}', 'url', this.value)" placeholder="https://drive.google.com/..." class="w-full px-3 py-2 text-xs bg-gray-800 border border-gray-700 rounded-xl text-white">
+      </div>
+
+      <!-- Upload File Langsung -->
+      <div>
+        <label class="block text-[11px] font-semibold text-gray-400 mb-1">📁 Unggah File Langsung (Gambar/Video/ZIP/PDF)</label>
+        <input type="file" onchange="handleAccessFileUpload(event, '${btnId}')" accept="image/*,video/*,.pdf,.zip,.rar" class="w-full text-xs text-gray-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-900/60 file:text-indigo-200 cursor-pointer">
+        <input type="hidden" id="accessFileBase64_${btnId}" value="${itemData.fileBase64 || ''}">
+        <div id="accessFilePreview_${btnId}" class="mt-1 ${itemData.fileBase64 ? '' : 'hidden'} text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+          <i data-lucide="check-circle" class="w-3 h-3"></i> File terunggah & siap diakses pembeli.
+        </div>
+      </div>
+
+      <!-- Deskripsi / Catatan Tambahan -->
+      <div>
+        <label class="block text-[11px] font-semibold text-gray-400 mb-1">Deskripsi / Instruksi Khusus Pembeli</label>
+        <textarea oninput="updateAccessButtonData('${btnId}', 'desc', this.value)" rows="2" placeholder="Tulis instruksi khusus (misal: password zip, tata cara instalasi, dll)..." class="w-full px-3 py-2 text-xs bg-gray-800 border border-gray-700 rounded-xl text-white leading-relaxed">${itemData.desc}</textarea>
+      </div>
+    </div>
+  `;
+
+  container.insertAdjacentHTML('beforeend', cardHtml);
+  if (window.lucide) lucide.createIcons();
+}
+
+/**
+ * Menghapus form item tombol akses dari list
+ */
+function removeAccessButtonField(btnId) {
+  tempAccessButtons = tempAccessButtons.filter(b => b.id != btnId);
+  const el = document.getElementById(`accessBtnItem_${btnId}`);
+  if (el) el.remove();
+}
+
+/**
+ * Meng-update nilai field ke array tempAccessButtons secara real-time
+ */
+function updateAccessButtonData(btnId, field, val) {
+  const item = tempAccessButtons.find(b => b.id == btnId);
+  if (item) {
+    item[field] = val;
+  }
+}
+
+/**
+ * Menangani upload file langsung pada tombol tertentu
+ */
+function handleAccessFileUpload(event, btnId) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    const base64 = evt.target.result;
+    document.getElementById(`accessFileBase64_${btnId}`).value = base64;
+    document.getElementById(`accessFilePreview_${btnId}`).classList.remove('hidden');
+    
+    updateAccessButtonData(btnId, 'fileBase64', base64);
+  };
+  reader.readAsDataURL(file);
+}
+
+/**
+ * Render ulang tombol saat membuka modal edit produk
+ */
+function renderAccessButtonsModal(existingButtons = []) {
+  const container = document.getElementById('accessButtonsContainer');
+  if (!container) return;
+  container.innerHTML = '';
+  tempAccessButtons = [];
+
+  if (existingButtons && existingButtons.length > 0) {
+    existingButtons.forEach(btnData => {
+      tempAccessButtons.push(btnData);
+      addAccessButtonField(btnData);
+    });
+  } else {
+    // Default 1 form kosong saat tambah baru
+    addAccessButtonField();
+  }
+}
+function handleUniversalFileUpload(event, callback) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    const base64Data = evt.target.result;
+    
+    // Peringatan jika ukuran file melebihi 4.5MB agar penyimpanan browser tidak crash
+    if (file.size > 4.5 * 1024 * 1024) {
+      triggerCustomAlert("Perhatian File Besar", "File berukuran >4.5MB akan membebani memori lokal. Pastikan browser Anda memiliki cukup ruang penyimpanan.");
+    }
+
+    if (typeof callback === 'function') {
+      callback(base64Data, file);
+    }
+  };
+  reader.readAsDataURL(file);
+}
+// Pastikan fungsi upload banner produk Anda mengisi variabel tempProductImageBase64
+function handleProdBannerUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    tempProductImageBase64 = evt.target.result; // Simpan ke variabel temporary
+    document.getElementById('prodImgInput').value = tempProductImageBase64; // Masukkan ke input
+    
+    // Tampilkan pratinjau banner
+    const preview = document.getElementById('prodBannerPreview');
+    if (preview) {
+      preview.src = tempProductImageBase64;
+      preview.classList.remove('hidden');
+    }
+  };
+  reader.readAsDataURL(file);
+    }
+    
