@@ -246,3 +246,14 @@ input:focus, select:focus, textarea:focus {
   from { opacity: 0; transform: translateY(-2px); }
   to { opacity: 1; transform: translateY(0); }
 }
+/* Membuat tombol konfirmasi bisa diklik dan berada di lapisan teratas */
+#confirmPaymentBtn, button:has-text("Saya Sudah Transfer") {
+  position: relative;
+  z-index: 9999;
+  pointer-events: auto !important;
+}
+
+/* Beri jarak aman di bagian bawah modal agar tidak tertutup menu HP */
+.modal-content, .payment-modal-box {
+  padding-bottom: 40px !important;
+}
