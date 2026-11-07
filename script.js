@@ -3293,33 +3293,3 @@ function handleUniversalFileUpload(event, callback) {
   };
   reader.readAsDataURL(file);
 }
-// Variabel penampung terpisah untuk banner media produk
-let tempBannerMediaBase64 = "";
-
-function handleProdBannerUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  // Cek ukuran file max 4.5MB agar tidak crash localStorage
-  if (file.size > 4.5 * 1024 * 1024) {
-    triggerCustomAlert("Peringatan File", "Ukuran file banner terlalu besar! Harap gunakan file di bawah 4.5MB atau gunakan Link URL eksternal.");
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.onload = function(evt) {
-    tempBannerMediaBase64 = evt.target.result; 
-    
-    // Masukkan ke input teks banner (jika ada)
-    const bannerUrlInput = document.getElementById('prodBannerInput'); // Sesuaikan ID input banner Anda jika ada
-    if (bannerUrlInput) bannerUrlInput.value = tempBannerMediaBase64;
-    
-    // Tampilkan pratinjau banner
-    const preview = document.getElementById('prodBannerPreview');
-    if (preview) {
-      preview.src = tempBannerMediaBase64;
-      preview.classList.remove('hidden');
-    }
-  };
-  reader.readAsDataURL(file);
-}
